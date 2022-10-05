@@ -22,4 +22,4 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file ./LearnCollectInst.Api/Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api:$(date +%s)
     - name: Docker Hub push
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api:$(date +%s)
