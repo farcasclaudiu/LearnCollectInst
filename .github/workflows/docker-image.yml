@@ -20,6 +20,6 @@ jobs:
         password: ${{ secrets.DOCKER_GITHUB_TOKEN }}
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file ./LearnCollectInst.Api/Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api:$(date +%s)
+      run: docker build . --file ./LearnCollectInst.Api/Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api:latest
     - name: Docker Hub push
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api:$(date +%s)
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/learncollectinst.api:latest
