@@ -1,0 +1,64 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      disk:
+      load:
+      filesystem:
+      memory:
+      network:
+      paging:
+
+exporters:
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+  logging:
+    logLevel: debug
+  zipkin:
+    endpoint: "http://zipkin-learn:9411/api/v2/spans"
+  file:
+    path: /tmp/otelcol_data.log
+    format: json
+  otlp:
+    endpoint: uptrace:14317
+    tls:
+      insecure: true
+    headers: { "uptrace-dsn": "http://project2_secret_token@localhost:14317/2" }
+
+processors:
+  batch:
+
+extensions:
+  health_check:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+  telemetry:
+    logs:
+      level: debug
+  #   metrics:
+  #     level: detailed
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp, zipkin, jaeger, logging]
+      processors: [batch]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp, logging] #prometheus
+    logs:
+      receivers: [otlp]
+      processors: []
+      exporters: [otlp, logging, file]

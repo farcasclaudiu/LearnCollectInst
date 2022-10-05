@@ -1,0 +1,99 @@
+version: '3.4'
+
+services:
+  learncollectinst.api:
+    image: ${DOCKER_REGISTRY-}learncollectinstapi
+    build:
+      context: .
+      dockerfile: LearnCollectInst.Api/Dockerfile
+    ports:
+      - "5100:80"
+    depends_on:
+      - otel-collector
+
+  # Jaeger
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268"
+      - "14250"
+
+  # Zipkin
+  zipkin-learn:
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9422:9411" #default 9411
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.61.0
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    restart: on-failure
+    user: '0:0' # required for logs
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - ./otelcol_data.log:/tmp/otelcol_data.log
+    ports:
+      - "13133:13133" # health_check extension
+      - '4317:4317' # OLTP gRPC receiver
+      - '4318:4318' # OLTP HTTP receiver
+      - '55679:55679' # zPages
+    depends_on:
+      - jaeger
+      - zipkin-learn
+  # Prometheus
+  #prometheus:
+  #  container_name: prometheus
+  #  image: prom/prometheus:latest
+  #  volumes:
+  #    - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+  #  ports:
+  #    - "9090:9090"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:22.9
+    restart: on-failure
+    environment:
+      CLICKHOUSE_DB: uptrace
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--spider',
+          '-q',
+          'localhost:8123/ping'
+        ]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    volumes:
+      - ch_data:/var/lib/clickhouse
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  uptrace:
+    image: 'uptrace/uptrace:latest'
+    #image: 'uptrace/uptrace-dev:latest'
+    volumes:
+      - uptrace_data:/var/lib/uptrace
+      - ./uptrace.yml:/etc/uptrace/uptrace.yml
+    #environment:
+    #  - DEBUG=2
+    ports:
+      - '14317:14317'
+      - '14318:14318'
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+volumes:
+  uptrace_data:
+    driver: local
+  ch_data:
+    driver: local
+  alertmanager_data:
+    driver: local
